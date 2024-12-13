@@ -1,16 +1,11 @@
-use std::fs;
-
-pub fn run_part_1() -> u32 {
-    let contents =
-        fs::read_to_string("src/day1/input.txt").expect("Should have been able to read the file");
-
-    let data = contents.trim().split("\n");
+pub fn part_1() -> u32 {
+    let lines = include_str!("input.txt");
 
     let mut left: Vec<u32> = Vec::new();
     let mut right: Vec<u32> = Vec::new();
 
-    for d in data {
-        let parts: Vec<&str> = d.split("   ").collect();
+    for line in lines.lines() {
+        let parts: Vec<&str> = line.split("   ").collect();
         let numbers: Result<Vec<u32>, _> = parts.into_iter().map(|s| s.parse::<u32>()).collect();
 
         match numbers {
@@ -20,7 +15,7 @@ pub fn run_part_1() -> u32 {
                     right.push(*y);
                 }
                 _ => {
-                    panic!("WTF");
+                    panic!("Wrong data. Not a parsable number.");
                 }
             },
             Err(_) => {
@@ -41,18 +36,15 @@ pub fn run_part_1() -> u32 {
     result
 }
 
-pub fn run_part_2() -> u32 {
-    let contents =
-        fs::read_to_string("src/day1/input.txt").expect("Should have been able to read the file");
-
-    let data = contents.trim().split("\n");
+pub fn part_2() -> u32 {
+    let lines = include_str!("input.txt");
 
     let mut left: Vec<u32> = Vec::new();
     let mut right: Vec<u32> = Vec::new();
 
-    for d in data {
-        let parts: Vec<&str> = d.split("   ").collect();
-        let numbers: Result<Vec<u32>, _> = parts.into_iter().map(|s| s.parse::<u32>()).collect();
+    for line in lines.lines() {
+        let parts: Vec<&str> = line.split("   ").collect();
+        let numbers: Result<Vec<u32>, _> = parts.into_iter().map(|s| s.parse()).collect();
 
         match numbers {
             Ok(nums) => match nums.as_slice() {
@@ -61,7 +53,7 @@ pub fn run_part_2() -> u32 {
                     right.push(*y);
                 }
                 _ => {
-                    panic!("WTF");
+                    panic!("Wrong data. Not a parsable number.");
                 }
             },
             Err(_) => {
