@@ -1,5 +1,6 @@
 use aoc::day1;
 use aoc::day2;
+use aoc::day3;
 use aoc::measure_time;
 use std::env;
 use std::time::Instant;
@@ -17,6 +18,11 @@ fn main() {
             println!("Running day2...");
             measure_time!({ day2::part_1() }, 2, 1);
             measure_time!({ day2::part_2() }, 2, 2);
+        }
+        Some(arg) if arg == "day3" => {
+            println!("Running day3...");
+            measure_time!({ day3::part_1() }, 3, 1);
+            measure_time!({ day3::part_2() }, 3, 2);
         }
         _ => {
             println!("No day mod file found!");
