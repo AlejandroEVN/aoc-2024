@@ -31,8 +31,8 @@ fn get_new_cords(
     col: i32,
     (x, y): (i32, i32),
 ) -> Option<(i32, i32)> {
-    let new_row = row as i32 + x;
-    let new_col = col as i32 + y;
+    let new_row = row + x;
+    let new_col = col + y;
 
     if new_row < 0
         || new_row == grid.len() as i32
@@ -51,28 +51,13 @@ fn has_cross_word(
     curr_cord: (i32, i32),
     diagonal_cords: Vec<(i32, i32)>,
 ) -> bool {
-    let mut chars: Vec<&str> = Vec::new();
+    let chars: Vec<&str> = diagonal_cords
+        .iter()
+        .filter_map(|(x, y)| get_new_cords(grid, curr_cord.0, curr_cord.1, (*x, *y)))
+        .map(|(r, c)| grid[r as usize][c as usize])
+        .collect();
 
-    for (x, y) in &diagonal_cords {
-        let new_cords;
-        match get_new_cords(grid, curr_cord.0, curr_cord.1, (*x, *y)) {
-            Some(cords) => {
-                new_cords = cords;
-            }
-            None => {
-                return false;
-            }
-        }
-        let character = grid[new_cords.0 as usize][new_cords.1 as usize];
-        chars.push(character);
-    }
-    let equal = compare_chars(target_chars, chars);
-
-    if !equal {
-        return false;
-    }
-
-    true
+    compare_chars(target_chars, chars)
 }
 
 fn has_word(
@@ -165,8 +150,8 @@ pub fn part_2() -> i32 {
 
     let mut count = 0;
 
-    for (row, line) in grid.clone().into_iter().enumerate() {
-        for (col, c) in line.into_iter().enumerate() {
+    for (row, line) in grid.iter().enumerate() {
+        for (col, &c) in line.iter().enumerate() {
             if c != "A" {
                 continue;
             }
