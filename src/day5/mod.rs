@@ -111,7 +111,7 @@ pub fn part_2() -> i32 {
                     break;
                 }
 
-                swap_position = position;
+                swap_position = position.unwrap();
             }
 
             let middle_page = new_pages_order.get(new_pages_order.len() / 2).unwrap();
@@ -126,13 +126,13 @@ fn check_and_swap(
     pages: &mut Vec<i32>,
     (i, j): (i32, i32),
     rules_hash: &HashSet<(i32, i32)>,
-) -> (bool, (i32, i32)) {
+) -> (bool, Option<(i32, i32)>) {
     pages.swap(i as usize, j as usize);
     let (correct, incorrect_positions) = are_pages_correct(&pages, &rules_hash);
 
     if correct {
-        return (true, (0, 0));
+        return (true, None);
     }
 
-    (false, *incorrect_positions.get(0).unwrap())
+    (false, Some(*incorrect_positions.get(0).unwrap()))
 }
