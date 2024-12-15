@@ -1,5 +1,36 @@
 use std::collections::HashSet;
 
+fn are_pages_correct(pages: &Vec<i32>, rules_hash: &HashSet<(i32, i32)>) -> bool {
+    let mut incorrect_positions = 0;
+
+    for (index, first_page) in pages.iter().rev().enumerate() {
+        if incorrect_positions != 0 {
+            break;
+        }
+        if index == pages.len() - 1 {
+            break;
+        }
+
+        for second_page in pages.iter().rev().skip(index + 1) {
+            let page_tuple = (*first_page, *second_page);
+
+            match rules_hash.contains(&page_tuple) {
+                true => {
+                    incorrect_positions += 1;
+                    continue;
+                }
+                false => {}
+            }
+        }
+    }
+
+    if incorrect_positions > 0 {
+        return false;
+    }
+
+    true
+}
+
 pub fn part_1() -> i32 {
     let data = include_str!("input.txt");
 
@@ -27,32 +58,8 @@ pub fn part_1() -> i32 {
                 continue;
             }
 
-            let mut incorrect_positions = 0;
-
-            for (index, first_page) in pages.iter().rev().enumerate() {
-                if incorrect_positions != 0 {
-                    break;
-                }
-                if index == pages.len() - 1 {
-                    break;
-                }
-
-                for second_page in pages.iter().rev().skip(index + 1) {
-                    let page_tuple = (*first_page, *second_page);
-
-                    match rules_hash.contains(&page_tuple) {
-                        true => {
-                            incorrect_positions += 1;
-                            continue;
-                        }
-                        false => {}
-                    }
-                }
-            }
-
-            if incorrect_positions == 0 {
-                let middle = pages.get(pages.len() / 2).unwrap();
-                middle_pages.push(*middle);
+            if are_pages_correct(&pages, &rules_hash) {
+                middle_pages.push(*pages.get(pages.len() / 2).unwrap());
             }
         }
     }
