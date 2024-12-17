@@ -24,6 +24,7 @@ impl LookDir {
 
 #[derive(Debug)]
 struct Guard {
+    starting_pos: (usize, usize),
     look_dir: LookDir,
     pos: (usize, usize),
     path: HashSet<(usize, usize)>,
@@ -32,6 +33,7 @@ struct Guard {
 impl Guard {
     fn new(pos: (usize, usize), look_dir: LookDir) -> Guard {
         Guard {
+            starting_pos: (pos.0, pos.1),
             pos: (pos.0, pos.1),
             look_dir,
             path: HashSet::new(),
@@ -48,7 +50,9 @@ impl Guard {
 
     fn walk(&mut self) {
         let next_pos = self.next_position();
-        self.path.insert(next_pos);
+        if next_pos != self.starting_pos {
+            self.path.insert(next_pos);
+        }
         self.pos = (next_pos.0, next_pos.1)
     }
 
@@ -63,33 +67,11 @@ impl Guard {
 }
 
 pub fn part_1() -> usize {
-    let data = include_str!("input.txt");
+    let data = include_str!("example.txt");
 
-    let grid: Grid = data
-        .lines()
-        .into_iter()
-        .map(|line| line.chars().collect())
-        .collect();
+    let (grid, (looking_at, pos)) = parse_grid_and_guard_position(data);
 
-    let guard_position: Vec<(LookDir, (usize, usize))> = grid
-        .iter()
-        .enumerate()
-        .flat_map(|(i, line)| {
-            line.into_iter()
-                .enumerate()
-                .filter_map(move |(j, c)| match c {
-                    '^' => Some((LookDir::UP, (i, j))),
-                    'v' => Some((LookDir::DOWN, (i, j))),
-                    '<' => Some((LookDir::LEFT, (i, j))),
-                    '>' => Some((LookDir::RIGHT, (i, j))),
-                    _ => None,
-                })
-        })
-        .collect();
-
-    let (looking_at, pos) = guard_position.first().unwrap();
-
-    let mut guard = Guard::new(*pos, looking_at.clone());
+    let mut guard = Guard::new(pos, looking_at.clone());
 
     loop {
         let next_position = guard.next_position();
@@ -97,6 +79,7 @@ pub fn part_1() -> usize {
         let exits_area = exits_the_mapped_area(&grid, next_position);
 
         if exits_area {
+            guard.walk();
             break;
         }
 
@@ -108,6 +91,17 @@ pub fn part_1() -> usize {
 
         guard.walk();
     }
+
+    println!("{guard:?}");
+    guard.path.iter().count()
+}
+
+pub fn part_2() -> usize {
+    let data = include_str!("example.txt");
+
+    let (grid, (looking_at, pos)) = parse_grid_and_guard_position(data);
+
+    let mut guard = Guard::new(pos, looking_at.clone());
 
     guard.path.iter().count() + 1
 }
@@ -137,7 +131,31 @@ fn should_turn(grid: &Grid, next_position: (usize, usize)) -> bool {
     }
 }
 
-pub fn part_2() -> i32 {
-    let data = include_str!("example.txt");
-    0
+fn parse_grid_and_guard_position(data: &str) -> (Grid, (LookDir, (usize, usize))) {
+    let grid: Grid = data
+        .lines()
+        .into_iter()
+        .map(|line| line.chars().collect())
+        .collect();
+
+    let guard_position: Vec<(LookDir, (usize, usize))> = grid
+        .iter()
+        .enumerate()
+        .flat_map(|(i, line)| {
+            line.into_iter()
+                .enumerate()
+                .filter_map(move |(j, c)| match c {
+                    '^' => Some((LookDir::UP, (i, j))),
+                    'v' => Some((LookDir::DOWN, (i, j))),
+                    '<' => Some((LookDir::LEFT, (i, j))),
+                    '>' => Some((LookDir::RIGHT, (i, j))),
+                    _ => None,
+                })
+        })
+        .collect();
+
+    match guard_position.first() {
+        Some((looking_dir, pos)) => (grid, (looking_dir.clone(), *pos)),
+        None => panic!("Wrong data! No Guard in the grid"),
+    }
 }
