@@ -67,7 +67,7 @@ impl Guard {
 }
 
 pub fn part_1() -> usize {
-    let data = include_str!("example.txt");
+    let data = include_str!("input.txt");
 
     let (grid, (looking_at, pos)) = parse_grid_and_guard_position(data);
 
@@ -92,7 +92,6 @@ pub fn part_1() -> usize {
         guard.walk();
     }
 
-    println!("{guard:?}");
     guard.path.iter().count()
 }
 
