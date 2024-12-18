@@ -1,9 +1,26 @@
 use core::panic;
-use std::{collections::HashSet, usize};
+use std::{collections::HashSet, isize, usize};
 
 type Grid = Vec<Vec<char>>;
+type Delta = (isize, isize);
+type Position = (usize, usize);
 
-#[derive(Debug, PartialEq, Clone)]
+trait AddDelta {
+    fn add_delta(&self, delta: Delta) -> Position;
+}
+
+impl AddDelta for Position {
+    fn add_delta(&self, delta: Delta) -> Position {
+        let (pos_row, pos_col) = *self;
+        let (d_row, d_col) = delta;
+        let new_row = pos_row as isize + d_row;
+        let new_col = pos_col as isize + d_col;
+
+        (new_row as usize, new_col as usize)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 enum LookDir {
     UP,
     DOWN,
@@ -12,7 +29,7 @@ enum LookDir {
 }
 
 impl LookDir {
-    fn delta(&self) -> (isize, isize) {
+    fn delta(&self) -> Delta {
         match self {
             LookDir::UP => (-1, 0),
             LookDir::DOWN => (1, 0),
@@ -24,45 +41,51 @@ impl LookDir {
 
 #[derive(Debug)]
 struct Guard {
-    starting_pos: (usize, usize),
-    look_dir: LookDir,
-    pos: (usize, usize),
-    path: HashSet<(usize, usize)>,
+    starting_pos: Position,
+    direction: LookDir,
+    pos: Position,
+    path: HashSet<(LookDir, usize, usize)>,
+    unique_positions: HashSet<Position>,
 }
 
 impl Guard {
-    fn new(pos: (usize, usize), look_dir: LookDir) -> Guard {
+    fn new(pos: Position, look_dir: LookDir) -> Guard {
         Guard {
             starting_pos: (pos.0, pos.1),
             pos: (pos.0, pos.1),
-            look_dir,
+            direction: look_dir,
             path: HashSet::new(),
+            unique_positions: HashSet::new(),
         }
     }
 
-    fn next_position(&self) -> (usize, usize) {
-        let (dx, dy) = self.look_dir.delta();
-        let new_x = self.pos.0 as isize + dx;
-        let new_y = self.pos.1 as isize + dy;
+    fn next_position(&self) -> Position {
+        let (new_row, new_col) = self.pos.add_delta(self.direction.delta());
 
-        (new_x as usize, new_y as usize)
+        (new_row as usize, new_col as usize)
     }
 
     fn walk(&mut self) {
         let next_pos = self.next_position();
         if next_pos != self.starting_pos {
-            self.path.insert(next_pos);
+            self.unique_positions.insert((next_pos.0, next_pos.1));
         }
+        self.path
+            .insert((self.direction.clone(), next_pos.0, next_pos.1));
         self.pos = (next_pos.0, next_pos.1)
     }
 
     fn turn(&mut self) {
-        match self.look_dir {
-            LookDir::UP => self.look_dir = LookDir::RIGHT,
-            LookDir::RIGHT => self.look_dir = LookDir::DOWN,
-            LookDir::DOWN => self.look_dir = LookDir::LEFT,
-            LookDir::LEFT => self.look_dir = LookDir::UP,
-        }
+        self.direction = turn_right_direction(&self.direction);
+    }
+}
+
+fn turn_right_direction(curr_dir: &LookDir) -> LookDir {
+    match curr_dir {
+        LookDir::UP => LookDir::RIGHT,
+        LookDir::RIGHT => LookDir::DOWN,
+        LookDir::DOWN => LookDir::LEFT,
+        LookDir::LEFT => LookDir::UP,
     }
 }
 
@@ -76,7 +99,8 @@ pub fn part_1() -> usize {
     loop {
         let next_position = guard.next_position();
 
-        let exits_area = exits_the_mapped_area(&grid, next_position);
+        let exits_area =
+            exits_the_mapped_area(&grid, (next_position.0 as isize, next_position.1 as isize));
 
         if exits_area {
             guard.walk();
@@ -92,24 +116,81 @@ pub fn part_1() -> usize {
         guard.walk();
     }
 
-    guard.path.iter().count()
+    guard.unique_positions.iter().count()
 }
 
 pub fn part_2() -> usize {
-    let data = include_str!("example.txt");
+    let data = include_str!("input.txt");
 
     let (grid, (looking_at, pos)) = parse_grid_and_guard_position(data);
 
     let mut guard = Guard::new(pos, looking_at.clone());
 
-    guard.path.iter().count() + 1
+    let mut obstacles = 0;
+
+    loop {
+        let next_position = guard.next_position();
+
+        let exits_area =
+            exits_the_mapped_area(&grid, (next_position.0 as isize, next_position.1 as isize));
+
+        if exits_area {
+            guard.walk();
+            break;
+        }
+
+        if obstacle_on_crossed_path(&grid, &guard) {
+            obstacles += 1;
+        }
+
+        let should_turn = should_turn(&grid, next_position);
+
+        if should_turn {
+            guard.turn();
+        }
+
+        guard.walk();
+    }
+
+    obstacles
 }
 
-fn exits_the_mapped_area(grid: &Grid, next_position: (usize, usize)) -> bool {
-    next_position.0 >= grid.len() || next_position.1 >= grid.first().unwrap().len()
+fn next_position(grid: &Grid, curr_position: Position, direction: &LookDir) -> Option<Position> {
+    let (next_x, next_y) = curr_position.add_delta(direction.delta());
+    let out_of_bounds = exits_the_mapped_area(grid, (next_x as isize, next_y as isize));
+
+    if out_of_bounds {
+        return None;
+    }
+
+    Some((next_x as usize, next_y as usize))
 }
 
-fn should_turn(grid: &Grid, next_position: (usize, usize)) -> bool {
+fn obstacle_on_crossed_path(grid: &Grid, guard: &Guard) -> bool {
+    let turn_right_direction = turn_right_direction(&guard.direction);
+    let mut position = guard.pos;
+
+    while let Some(next_pos) = next_position(grid, position, &turn_right_direction) {
+        if guard
+            .path
+            .contains(&(turn_right_direction.clone(), next_pos.0, next_pos.1))
+        {
+            return true;
+        }
+        position = next_pos;
+    }
+
+    false
+}
+
+fn exits_the_mapped_area(grid: &Grid, next_position: Delta) -> bool {
+    next_position.0 >= grid.len() as isize
+        || next_position.1 >= grid.first().unwrap().len() as isize
+        || next_position.0 < 0
+        || next_position.1 < 0
+}
+
+fn should_turn(grid: &Grid, next_position: Position) -> bool {
     let row = grid.get(next_position.0);
 
     match row {
@@ -130,14 +211,14 @@ fn should_turn(grid: &Grid, next_position: (usize, usize)) -> bool {
     }
 }
 
-fn parse_grid_and_guard_position(data: &str) -> (Grid, (LookDir, (usize, usize))) {
+fn parse_grid_and_guard_position(data: &str) -> (Grid, (LookDir, Position)) {
     let grid: Grid = data
         .lines()
         .into_iter()
         .map(|line| line.chars().collect())
         .collect();
 
-    let guard_position: Vec<(LookDir, (usize, usize))> = grid
+    let guard_position: Vec<(LookDir, Position)> = grid
         .iter()
         .enumerate()
         .flat_map(|(i, line)| {
