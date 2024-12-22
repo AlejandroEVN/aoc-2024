@@ -20,7 +20,7 @@ impl AddDelta for Position {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash, Copy)]
 enum LookDir {
     UP,
     DOWN,
@@ -39,7 +39,7 @@ impl LookDir {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Guard {
     starting_pos: Position,
     direction: LookDir,
@@ -120,13 +120,14 @@ pub fn part_1() -> usize {
 }
 
 pub fn part_2() -> usize {
-    let data = include_str!("input.txt");
+    let data = include_str!("example.txt");
 
     let (grid, (looking_at, pos)) = parse_grid_and_guard_position(data);
 
     let mut guard = Guard::new(pos, looking_at.clone());
 
     let mut obstacles = 0;
+    let mut i = 0;
 
     loop {
         let next_position = guard.next_position();
@@ -139,8 +140,10 @@ pub fn part_2() -> usize {
             break;
         }
 
-        if obstacle_on_crossed_path(&grid, &guard) {
-            obstacles += 1;
+        if i != 0 {
+            if obstacle_on_crossed_path(&grid, &guard) {
+                obstacles += 1;
+            }
         }
 
         let should_turn = should_turn(&grid, next_position);
@@ -150,37 +153,66 @@ pub fn part_2() -> usize {
         }
 
         guard.walk();
+        i += 1;
     }
 
     obstacles
 }
 
-fn next_position(grid: &Grid, curr_position: Position, direction: &LookDir) -> Option<Position> {
-    let (next_x, next_y) = curr_position.add_delta(direction.delta());
-    let out_of_bounds = exits_the_mapped_area(grid, (next_x as isize, next_y as isize));
-
-    if out_of_bounds {
-        return None;
-    }
-
-    Some((next_x as usize, next_y as usize))
-}
-
 fn obstacle_on_crossed_path(grid: &Grid, guard: &Guard) -> bool {
-    let turn_right_direction = turn_right_direction(&guard.direction);
-    let mut position = guard.pos;
+    let mut new_guard = guard.clone();
+    new_guard.turn();
 
-    while let Some(next_pos) = next_position(grid, position, &turn_right_direction) {
+    loop {
+        let next_position = new_guard.next_position();
+
+        /* for (row, cols) in grid.iter().enumerate() {
+            for (col, cell) in cols.iter().enumerate() {
+                if guard.unique_positions.contains(&(row, col)) {
+                    print!("^");
+                } else if new_guard.unique_positions.contains(&(row, col)) {
+                    print!("A");
+                } else if (row, col) == next_position {
+                    print!("G");
+                } else {
+                    print!("{cell}");
+                }
+            }
+            println!();
+        }
+        println!();
+        sleep(Duration::new(0, 500000000)); */
+
         if guard
             .path
-            .contains(&(turn_right_direction.clone(), next_pos.0, next_pos.1))
+            .contains(&(new_guard.direction, next_position.0, next_position.1))
         {
             return true;
         }
-        position = next_pos;
-    }
 
-    false
+        if new_guard
+            .path
+            .contains(&(new_guard.direction, next_position.0, next_position.1))
+        {
+            return false;
+        }
+
+        let exits_area =
+            exits_the_mapped_area(&grid, (next_position.0 as isize, next_position.1 as isize));
+
+        if exits_area {
+            new_guard.walk();
+            return false;
+        }
+
+        let should_turn = should_turn(&grid, next_position);
+
+        if should_turn {
+            new_guard.turn();
+        }
+
+        new_guard.walk();
+    }
 }
 
 fn exits_the_mapped_area(grid: &Grid, next_position: Delta) -> bool {

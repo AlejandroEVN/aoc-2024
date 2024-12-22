@@ -37,6 +37,11 @@ fn main() {
             measure_time!({ aoc::day6::part_1() }, 6, 1);
             measure_time!({ aoc::day6::part_2() }, 6, 2);
         }
+        Some(arg) if arg == "day7" => {
+            println!("Running day7...");
+            measure_time!({ aoc::day7::part_1() }, 7, 1);
+            measure_time!({ aoc::day7::part_2() }, 7, 2);
+        }
         _ => {
             println!("No day mod file found!");
         }
